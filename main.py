@@ -1,102 +1,191 @@
-from supabase import create_client, Client
+from supabase import create_client
+import requests
 import os
 import json
 import time
 from wikidata.client import Client
 import wikipedia
 from dotenv import load_dotenv
+
 load_dotenv()
 
-SUPABASE_URL = "https://nrjxejxbxniijbmquudy.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yanhlanhieG5paWpibXF1dWR5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY3NDMwNTY0NCwiZXhwIjoxOTg5ODgxNjQ0fQ.3u7yTeQwlheX12UbEzoHMgouRHNEwhKmvWLtNgpkdBY"
 url: str = os.environ.get("SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-## connect to supabase
+print("---------------------------------------------------------------------------")
+print("**                       STARTING WIKIPEDIA HARVESTER                    **")
+print("---------------------------------------------------------------------------")
 
-_p = supabase.table("dmg_personen_LDES").select("*").execute()
-p = _p.json()
+supabase: Client = create_client(url, key)
+
+_x = supabase.table('dmg_personen_LDES') \
+    .select("*") \
+    .execute()
+
+p = _x.json()
 p = json.loads(p)
 
-print(len(p["data"]))
-
-import requests
+count = len(p["data"])
+process = 0
 
 base = (p["data"])
-for i in range(0,len(p["data"])):
+for i in range(0, len(p["data"])):
+    print("processing:     " + str(process) + "/" + str(len(p["data"])))
     wikipedia_data = {}
     try:
         owl = base[i]["LDES_raw"]["object"]["owl:sameAs"]
-        for i in range(0, len(owl)):
-            if "wikidata" in  owl[i]:
-                time.sleep(1)
+        _id = base[i]["agent_ID"]
 
-                # parse wikidata Q number from LDES
-                Q = owl[i].split("/")[-1]
+        try:
+            print("id:             " + str(_id))
+            print("same as:        " + str(owl))
 
-                #create link for API request
-                link = "https://www.wikidata.org/w/api.php?action=wbgetentities&ids="+Q+"&format=json"
-                f = requests.get(link)
-                _json = json.loads(f.text);
+            time.sleep(1)
+            # parse wikidata Q number from LDES
+            Q = owl.split("/")[-1]
 
-                try:
-                    print("-----------DUTCH-------------")
-                    wikipedia.set_lang("nl")
-                    print(_json["entities"][Q]["labels"]["nl"]["value"])
-                    _page = wikipedia.page(_json["entities"][Q]["labels"]["nl"]["value"], auto_suggest=False)
+            # create link for API request
+            link = "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=" + Q + "&format=json"
+            f = requests.get(link)
+            _json = json.loads(f.text);
 
-                    nl_url = _page.url
-                    nl_title = _page.title
-                    nl_snippet = wikipedia.summary(_json["entities"][Q]["labels"]["nl"]["value"])
+            print(" ")
 
-                except:
-                    nl_url = "no data"
-                    nl_title = "no data"
-                    nl_snippet = "no data"
+            try:
+                # DUTCH
+                wikipedia.set_lang("nl")
+                _page = wikipedia.page(_json["entities"][Q]["labels"]["nl"]["value"], auto_suggest=False)
 
-                try:
-                    print("-----------ENGLISH-------------")
-                    wikipedia.set_lang("en")
-                    print(_json["entities"][Q]["labels"]["en"]["value"])
-                    _page = wikipedia.page(_json["entities"][Q]["labels"]["en"]["value"], auto_suggest=False)
+                print("DUTCH:          " + str(_json["entities"][Q]["labels"]["nl"]["value"]))
 
-                    en_url = _page.url
-                    en_title = _page.title
-                    en_snippet = wikipedia.summary(_json["entities"][Q]["labels"]["nl"]["value"])
+                nl_url = _page.url
+                nl_title = _page.title
+                nl_snippet = wikipedia.summary(_json["entities"][Q]["labels"]["nl"]["value"])
 
-                except:
-                    en_url = "no data"
-                    en_title = "no data"
-                    en_snippet = "no data"
+            except:
+                nl_url = "no data"
+                nl_title = "no data"
+                nl_snippet = "no data"
 
-                try:
-                    print("-----------FRENCH-------------")
-                    wikipedia.set_lang("fr")
-                    print(_json["entities"][Q]["labels"]["fr"]["value"])
-                    _page = wikipedia.page(_json["entities"][Q]["labels"]["fr"]["value"], auto_suggest=False)
+            try:
+                # ENGLISH
+                wikipedia.set_lang("en")
+                print("ENGLISH:        " + str(_json["entities"][Q]["labels"]["nl"]["value"]))
+                _page = wikipedia.page(_json["entities"][Q]["labels"]["en"]["value"], auto_suggest=False)
 
-                    fr_url = _page.url
-                    fr_title = _page.title
-                    fr_snippet = wikipedia.summary(_json["entities"][Q]["labels"]["fr"]["value"])
+                en_url = _page.url
+                en_title = _page.title
+                en_snippet = wikipedia.summary(_json["entities"][Q]["labels"]["nl"]["value"])
 
-                except:
-                    fr_url = "no data"
-                    fr_title = "no data"
-                    fr_snippet ="no data"
+            except:
+                en_url = "no data"
+                en_title = "no data"
+                en_snippet = "no data"
 
-                print("------------------------")
+            try:
+                # FRENCH
+                wikipedia.set_lang("fr")
+                print("FRENCH:         " + str(_json["entities"][Q]["labels"]["fr"]["value"]))
+                _page = wikipedia.page(_json["entities"][Q]["labels"]["fr"]["value"], auto_suggest=False)
 
-                wikipedia_info = json.dumps({"nl":{"source": nl_url, "title": nl_title, "snippet": nl_snippet},
-                                             "fr":{"source": fr_url, "title": fr_title, "snippet": fr_snippet},
-                                             "en":{"source": en_url, "title": en_title, "snippet": en_snippet }})
-                print(wikipedia_info)
+                fr_url = _page.url
+                fr_title = _page.title
+                fr_snippet = wikipedia.summary(_json["entities"][Q]["labels"]["fr"]["value"])
 
-                print("------------------------")
+            except:
+                fr_url = "no data"
+                fr_title = "no data"
+                fr_snippet = "no data"
+
+
+            wikipedia_info = json.dumps({"nl": {"source": nl_url, "title": nl_title, "snippet": nl_snippet},
+                                         "fr": {"source": fr_url, "title": fr_title, "snippet": fr_snippet},
+                                         "en": {"source": en_url, "title": en_title, "snippet": en_snippet}})
+
+
+            ## update in supabase.
+            supabase.table("dmg_personen_LDES").update({"wikipedia_bios": wikipedia_info}).eq("agent_ID", _id).execute()
+
+        except:
+            for i in range(0, len(owl)):
+                if "wikidata" in owl[i]:
+
+                    time.sleep(1)
+                    # parse wikidata Q number from LDES
+                    Q = owl[i].split("/")[-1]
+
+                    # create link for API request
+                    link = "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=" + Q + "&format=json"
+                    f = requests.get(link)
+                    _json = json.loads(f.text);
+
+                    try:
+                        #DUTCH
+                        wikipedia.set_lang("nl")
+                        print("DUTCH:          " + str(_json["entities"][Q]["labels"]["nl"]["value"]))
+
+                        _page = wikipedia.page(_json["entities"][Q]["labels"]["nl"]["value"], auto_suggest=False)
+
+                        nl_url = _page.url
+                        nl_title = _page.title
+                        nl_snippet = wikipedia.summary(_json["entities"][Q]["labels"]["nl"]["value"])
+
+                    except:
+                        nl_url = "no data"
+                        nl_title = "no data"
+                        nl_snippet = "no data"
+
+                    try:
+                        # ENGLISH
+                        wikipedia.set_lang("en")
+                        print("ENGLISH:        " + str(_json["entities"][Q]["labels"]["en"]["value"]))
+
+                        _page = wikipedia.page(_json["entities"][Q]["labels"]["en"]["value"], auto_suggest=False)
+
+                        en_url = _page.url
+                        en_title = _page.title
+                        en_snippet = wikipedia.summary(_json["entities"][Q]["labels"]["nl"]["value"])
+
+                    except:
+                        en_url = "no data"
+                        en_title = "no data"
+                        en_snippet = "no data"
+
+                    try:
+                        #FRENCH
+                        wikipedia.set_lang("fr")
+                        print("FRENCH:         " + str(_json["entities"][Q]["labels"]["fr"]["value"]))
+                        _page = wikipedia.page(_json["entities"][Q]["labels"]["fr"]["value"], auto_suggest=False)
+
+                        fr_url = _page.url
+                        fr_title = _page.title
+                        fr_snippet = wikipedia.summary(_json["entities"][Q]["labels"]["fr"]["value"])
+
+                    except:
+                        fr_url = "no data"
+                        fr_title = "no data"
+                        fr_snippet = "no data"
+
+
+                    wikipedia_info = json.dumps({"nl": {"source": nl_url, "title": nl_title, "snippet": nl_snippet},
+                                                 "fr": {"source": fr_url, "title": fr_title, "snippet": fr_snippet},
+                                                 "en": {"source": en_url, "title": en_title, "snippet": en_snippet}})
+                    print(wikipedia_info)
+
+                    ## update in supabase.
+                    print(_id)
+                    supabase.table("dmg_personen_LDES").update({"wikipedia_bios": wikipedia_info}).eq("agent_ID",
+                                                                                                      _id).execute()
+
+        process = process + 1
+        print("---------------------------------------------------------------------------")
+
+
 
     except:
+        process = process + 1
         print("no wikidata for this record")
-        #print( base[i]["LDES_raw"]["object"])
+        print("---------------------------------------------------------------------------")
 
-## https://github.com/goldsmith/Wikipedia
+    ## https://github.com/goldsmith/Wikipedia
 ## https://wikidata.readthedocs.io/en/stable/
