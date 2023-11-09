@@ -3,8 +3,14 @@ Service that fetches wikipedia biographies in several languages (Dutch, French, 
 
 ## dependencies
 
-## how it works
+this service runs on top of our Postgres DB (hosted on Supabase). 
+we make use of the following open source libraries:
+- [wikipedia](https://pypi.org/project/wikipedia/)
 
+## how it works
+this service weekly runs over all agent (human and organisations) entities in our public database (exposed via the dmg-rest-api) and checks for updates on Wikipedia articles produced on these entities. 
+
+example log:
 ```
 ---------------------------------------------------------------------------
 **                       STARTING WIKIPEDIA HARVESTER                    **
