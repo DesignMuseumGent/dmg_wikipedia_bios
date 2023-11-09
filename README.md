@@ -8,7 +8,7 @@ we make use of the following open source libraries:
 - [wikipedia](https://pypi.org/project/wikipedia/)
 
 ## how it works
-this service weekly runs over all agent (human and organisations) entities in our public database (exposed via the dmg-rest-api) and checks for updates on Wikipedia articles produced on these entities. 
+this service weekly runs over all agent (human and organisations) entities in our public database (exposed via the [dmg-rest-api](https://github.com/DesignMuseumGent/dmg-rest-api)) and checks for updates on Wikipedia articles produced on these entities. 
 
 example log:
 ```
